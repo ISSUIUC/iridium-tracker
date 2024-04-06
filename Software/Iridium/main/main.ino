@@ -94,8 +94,7 @@ SFE_UBLOX_GNSS myGPS;
 #include "Tracker_Message_Fields.h" // Include the message field and storage definitions
 trackerSettings myTrackerSettings; // Create storage for the tracker settings in RAM
 
-// THIS IS IMPORTANT
-#define noTX // Uncomment this line to disable the Iridium SBD transmit if you want to test the code without using message credits
+// #define noTX // Uncomment this line to disable the Iridium SBD transmit if you want to test the code without using message credits
 //#define skipGNSS // Uncomment this line to skip getting a GNSS fix (only valid if noTX is defined too)
 
 #include "RTC.h" //Include RTC library included with the Arduino_Apollo3 core
@@ -677,7 +676,7 @@ void loop()
 
           if (dynamicModelSet == false)
           {
-            if (myGPS.setDynamicModel(AIRBORNE2g) == false)
+            if (myGPS.setDynamicModel(DYN_MODEL_AIRBORNE1g) == false)
             {
               Serial.println(F("*** Warning: setDynamicModel may have failed ***"));
             }
