@@ -4,12 +4,12 @@ Repository for code that runs on the iridium tracker for the MIDAS avionics syst
 ## Getting Started
 As there is no current platformio build target for the SparkFun Artemis board, we will be using the Arduino IDE (all rejoice).
 
-In the arduino IDE, using the board manager, Install an "Aditional Core", and enter this [link](https://raw.githubusercontent.com/sparkfun/Arduino_Apollo3/master/package_sparkfun_apollo3_index.json).
+In the arduino IDE, using the board manager, install an "Aditional Core", and enter this [link](https://raw.githubusercontent.com/sparkfun/Arduino_Apollo3/master/package_sparkfun_apollo3_index.json).
 
-Once this is installed, you will need to isntall some libraries using the library manager. These are all outlined in the big comment block at the top of ```Software/Iridium/main/main.ino``` and ```Software/Iridium/main_no_tx/main_no_tx.ino```. The libraries you need to install are:
-- [Iridium SBD I2C](https://github.com/sparkfun/SparkFun_IridiumSBD_I2C_Arduino_Library), avalible by searching `IridiumSBDi2c` in the arduino library
-- [Qwiic_PHT_MS8607](https://github.com/sparkfun/SparkFun_PHT_MS8607_Arduino_Library), avalible by searching `SparkFun MS8607`
-- [SparkFun u-blox](https://github.com/sparkfun/SparkFun_u-blox_GNSS_Arduino_Library), avalible by searching `SparkFun u-blox GNSS`
+Once this is installed, you will need to install some libraries using the library manager. These are all outlined in the big comment block at the top of ```Software/Iridium/main/main.ino``` and ```Software/Iridium/main_no_tx/main_no_tx.ino```. The libraries you need to install are:
+- [Iridium SBD I2C](https://github.com/sparkfun/SparkFun_IridiumSBD_I2C_Arduino_Library), available by searching `IridiumSBDi2c` in the arduino library
+- [Qwiic_PHT_MS8607](https://github.com/sparkfun/SparkFun_PHT_MS8607_Arduino_Library), available by searching `SparkFun MS8607`
+- [SparkFun u-blox](https://github.com/sparkfun/SparkFun_u-blox_GNSS_Arduino_Library), available by searching `SparkFun u-blox GNSS`
 
 Once you have all these installed, you should be good to start flashing code.
 
