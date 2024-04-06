@@ -6,6 +6,8 @@
 
 #include "Arduino.h"
 
+# define LOOP_SLEEP_LENGTH_MS 30000
+
 // Data type storage lengths when stored in EEPROM
 #define LEN_BYTE    1
 #define LEN_INT16   2

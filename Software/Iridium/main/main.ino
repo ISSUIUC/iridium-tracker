@@ -2597,6 +2597,8 @@ void loop()
     break; // End of case configureMe
 
   } // End of switch (loop_step)
+
+  delay(LOOP_SLEEP_LENGTH_MS) // sleep for some amount of seconds so we don't run through credits
 } // End of loop()
 
 void setAGTWirePullups(uint32_t i2cBusPullUps)
