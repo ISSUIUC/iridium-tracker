@@ -145,7 +145,7 @@
 #define DEF_GEOF4LAT  0
 #define DEF_GEOF4LON  0
 #define DEF_GEOF4RAD  0
-#define DEF_WAKEINT   60 // Seconds
+#define DEF_WAKEINT   5 // Seconds
 #define DEF_ALARMINT  5 // Minutes
 #define DEF_TXINT     5 // Minutes
 #define DEF_LOWBATT   320 // 320 * 0.01V = 3.2V

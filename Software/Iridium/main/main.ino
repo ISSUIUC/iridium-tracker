@@ -2162,6 +2162,7 @@ void loop()
           {
             err = modem.sendReceiveSBDText(NULL, mt_buffer, mtBufferSize); // Send a NULL message
           }
+          delay(LOOP_SLEEP_LENGTH_MS)
 #else
           err = ISBD_SUCCESS; // Fake successful transmit
           mtBufferSize = 0; // and with no MT message received
@@ -2597,8 +2598,7 @@ void loop()
     break; // End of case configureMe
 
   } // End of switch (loop_step)
-
-  delay(LOOP_SLEEP_LENGTH_MS) // sleep for some amount of seconds so we don't run through credits
+ // sleep for some amount of seconds so we don't run through credits
 } // End of loop()
 
 void setAGTWirePullups(uint32_t i2cBusPullUps)

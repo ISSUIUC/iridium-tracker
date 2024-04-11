@@ -1475,7 +1475,7 @@ class MainWidget(QWidget):
         flags = 0
         if self.checkbox_F2_GEOFENCE.isChecked():
             flags = flags | 0b10000000
-            wake_int = 60
+            wake_int = 5
             alarm_int = 5
             try:
                 if self.val_WAKEINT.text().isdigit():
@@ -1492,7 +1492,7 @@ class MainWidget(QWidget):
         if self.checkbox_F2_LOWBATT.isChecked(): flags = flags | 0b00100000
         if self.checkbox_F2_RING.isChecked():
             flags = flags | 0b00010000
-            wake_int = 60
+            wake_int = 5
             alarm_int = 5
             tx_int = 5
             try:

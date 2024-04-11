@@ -123,7 +123,7 @@
 #define DEF_MOFIELDS0 0x00000f00 // Default to sending DATETIME, LAT, LON and ALT in MO messages
 #define DEF_MOFIELDS1 0x00000000
 #define DEF_MOFIELDS2 0x00000000
-#define DEF_FLAGS1    0 // Default to text messages
+#define DEF_FLAGS1    1 // Default to text messages
 #define DEF_FLAGS2    0
 #define DEF_DEST      0
 #define DEF_HIPRESS   1084
@@ -145,7 +145,7 @@
 #define DEF_GEOF4LAT  0
 #define DEF_GEOF4LON  0
 #define DEF_GEOF4RAD  0
-#define DEF_WAKEINT   60 // Seconds
+#define DEF_WAKEINT   5 // Seconds
 #define DEF_ALARMINT  5 // Minutes
 #define DEF_TXINT     5 // Minutes
 #define DEF_LOWBATT   320 // 320 * 0.01V = 3.2V
