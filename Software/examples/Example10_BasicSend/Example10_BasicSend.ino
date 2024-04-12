@@ -143,8 +143,6 @@ void setup()
 
   // Start the console serial port
   Serial.begin(115200);
-  while (!Serial) // Wait for the user to open the serial monitor
-    ;
   delay(100);
   Serial.println();
   Serial.println();
@@ -161,8 +159,6 @@ void setup()
   Serial.println(F("and that the line ending is set to Newline."));
   Serial.println(F("Then click Send to start the example."));
   Serial.println();
-  while(Serial.available() == 0)
-    ;
 
   // Enable the supercapacitor charger
   Serial.println(F("Enabling the supercapacitor charger..."));
