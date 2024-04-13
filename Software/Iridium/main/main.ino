@@ -178,11 +178,11 @@ typedef struct big_packet {
   byte id; // 2 bits
   byte seconds; // 6 bits
   byte minutes; // 6 bits
-  int32_t latitude; // 26 bits
-  int32_t longitude; // 26 bits
-  int32_t altitude; // 32 bits
+  int32_t latitude; // 32 bits
+  int32_t longitude; // 32 bits
+  int32_t altitude; // 16 bits
   int16_t vbat; // will need 10 bits for -512 cV to 511 cV, can do 8 bits if we want +/- 128, 9 for +/- 25
-  int32_t baro_alt; // 32 bits
+  int32_t baro_alt; // 16 bits
   byte sats; // 4 bits
 } big_packet;
 
@@ -192,6 +192,9 @@ big_packet big_packet_buffer[2];
 int time_last_big_packet = millis();
 
 bool send_big_packet = false;
+
+int num_packet_sent = 0;
+int start_time = millis();
 
 #define GET_BOTTOM_BITS(n) ((1 << n) - 1)
 
@@ -599,9 +602,9 @@ void loop()
         send_big_packet = true;
         time_last_big_packet = millis();
       }
-      Serial.print("number of loops is: ");
+      // Serial.print("number of loops is: ");
       int num_packets = send_big_packet ? 2 : 4;
-      Serial.println(num_packets);
+      // Serial.println(num_packets);
 
       for (int loops = 0; loops < num_packets; loops++) {
         Serial.println(F("Waiting for a 3D GNSS fix..."));
@@ -769,9 +772,9 @@ void loop()
         delay(GPS_BUFFER_DELAY_MS);
       }
 
-      Serial.print("Current loop step is");
+      // Serial.print("Current loop step is");
       // loop_step = start_9603;
-      Serial.println(loop_step);
+      // Serial.println(loop_step);
 
       // Power down the GNSS
       Serial.println(F("Powering down the GNSS..."));
@@ -794,7 +797,7 @@ void loop()
       Serial.println(F("Enabling the supercapacitor charger..."));
       digitalWrite(superCapChgEN, HIGH); // Enable the super capacitor charger
 
-      Serial.println(F("Waiting for supercapacitors to charge..."));
+      // Serial.println(F("Waiting for supercapacitors to charge..."));
       // Give the supercap charger 2secs to power up in a non-blocking way (so we can respond to config serial data as soon as it arrives)
       delayCount = 0;
       while ((delayCount < 2000) && (Serial.available() == 0))
@@ -859,6 +862,13 @@ void loop()
         // The super capacitors did not charge so power down and go to sleep
         Serial.println(F("*** Supercapacitors failed to charge ***"));
 
+        for (int i = 0; i < 3; i++) {
+          digitalWrite(LED, HIGH);
+          delay(5000);
+          digitalWrite(LED, LOW);
+          delay(1000);
+        }
+
         loop_step = zzz;
       }
   
@@ -876,7 +886,7 @@ void loop()
     // Give the super capacitors some extra time to charge
     case wait_LTC3225:
     {
-      Serial.println(F("Giving the supercapacitors extra time to charge..."));
+      // Serial.println(F("Giving the supercapacitors extra time to charge..."));
  
       // Wait for TOPUP_timeout seconds, keep checking PGOOD and the battery voltage
       for (unsigned long tnow = millis(); (millis() - tnow < TOPUP_timeout * 1000UL) && (Serial.available() == 0);)
@@ -919,7 +929,7 @@ void loop()
       else if (PGOOD)
       {
         // If the capacitors are still charged OK
-        Serial.println(F("Supercapacitors charged!"));
+        // Serial.println(F("Supercapacitors charged!"));
         
         loop_step = start_9603; // Move on and start the 9603N
       }
@@ -928,6 +938,7 @@ void loop()
       {
         // The super capacitors did not charge so power down and go to sleep
         Serial.println(F("*** Supercapacitors failed to hold charge in wait_LTC3225 ***"));
+
 
         loop_step = zzz;
       }
@@ -1002,64 +1013,38 @@ void loop()
               int sp = i * 12;
               small_packet cur = small_packet_buffer[i];
 
-              outBufferBinary[sp + 0] = cur.latitude & GET_BOTTOM_BITS(8);
-              outBufferBinary[sp + 1] = (cur.latitude >> 8) & GET_BOTTOM_BITS(8);
-              outBufferBinary[sp + 2] = (cur.latitude >> 16) & GET_BOTTOM_BITS(8);
-              outBufferBinary[sp + 3] = (cur.latitude >> 24) & GET_BOTTOM_BITS(8);
+              outBufferBinary[sp + 0] = ((cur.id) & GET_BOTTOM_BITS(2));
+              outBufferBinary[sp + 0] |= (cur.seconds) & GET_BOTTOM_BITS(6) << 2;
 
-              outBufferBinary[sp + 4] = cur.longitude & GET_BOTTOM_BITS(8);
-              outBufferBinary[sp + 5] = (cur.longitude >> 8) & GET_BOTTOM_BITS(8);
-              outBufferBinary[sp + 6] = (cur.longitude >> 16) & GET_BOTTOM_BITS(8);
-              outBufferBinary[sp + 7] = (cur.longitude >> 24) & GET_BOTTOM_BITS(8);
+              outBufferBinary[sp + 1] = cur.latitude & GET_BOTTOM_BITS(8);
+              outBufferBinary[sp + 2] = (cur.latitude >> 8) & GET_BOTTOM_BITS(8);
+              outBufferBinary[sp + 3] = (cur.latitude >> 16) & GET_BOTTOM_BITS(8);
+              outBufferBinary[sp + 4] = (cur.latitude >> 24) & GET_BOTTOM_BITS(8);
+
+              outBufferBinary[sp + 5] = cur.longitude & GET_BOTTOM_BITS(8);
+              outBufferBinary[sp + 6] = (cur.longitude >> 8) & GET_BOTTOM_BITS(8);
+              outBufferBinary[sp + 7] = (cur.longitude >> 16) & GET_BOTTOM_BITS(8);
+              outBufferBinary[sp + 8] = (cur.longitude >> 24) & GET_BOTTOM_BITS(8);
               
-              outBufferBinary[sp + 8] = (cur.altitude) & GET_BOTTOM_BITS(8);
-              outBufferBinary[sp + 9] = (cur.altitude >> 8) & GET_BOTTOM_BITS(8);
+              outBufferBinary[sp + 9] = (cur.altitude) & GET_BOTTOM_BITS(8);
+              outBufferBinary[sp + 10] = (cur.altitude >> 8) & GET_BOTTOM_BITS(8);
               
-              outBufferBinary[sp + 10] = (cur.seconds) & GET_BOTTOM_BITS(6);
-              outBufferBinary[sp + 10] |= ((cur.id) & GET_BOTTOM_BITS(2)) << 6;
               outBufferBinary[sp + 11] = (cur.minutes & GET_BOTTOM_BITS(6));
             }
-            outBufferPtr = 49;
+            outBufferPtr = 48;
           } else {
             send_big_packet = false;
 
             // do big packet shenanigans
             for (int i = 0; i < 2; i++) {
-              int start_ptr = i * 18;
+              int sp = i * 18;
               big_packet cur = big_packet_buffer[i];
 
-              outBufferBinary[start_ptr + 0] = ((cur.id) & GET_BOTTOM_BITS(2));
+              outBufferBinary[sp + 0] = ((cur.id) & GET_BOTTOM_BITS(2));
 
-              outBufferBinary[start_ptr + 0] |= ((cur.seconds) & GET_BOTTOM_BITS(6)) << 2;
+              outBufferBinary[sp + 0] |= ((cur.seconds) & GET_BOTTOM_BITS(6)) << 2;
 
-              outBufferBinary[start_ptr + 1] = ((cur.minutes) & GET_BOTTOM_BITS(6));
-
-              outBufferBinary[start_ptr + 1] != ((cur.latitude) & GET_BOTTOM_BITS(2)) << 6;
-              outBufferBinary[start_ptr + 2] = ((cur.latitude >> 2) & GET_BOTTOM_BITS(8));
-              outBufferBinary[start_ptr + 3] = ((cur.latitude >> 10) & GET_BOTTOM_BITS(8));
-              outBufferBinary[start_ptr + 4] = ((cur.latitude >> 18) & GET_BOTTOM_BITS(8));
-
-              outBufferBinary[start_ptr + 5] = ((cur.longitude) & GET_BOTTOM_BITS(8));
-              outBufferBinary[start_ptr + 6] = ((cur.longitude >> 8) & GET_BOTTOM_BITS(8));
-              outBufferBinary[start_ptr + 7] = ((cur.longitude >> 16) & GET_BOTTOM_BITS(8));
-              outBufferBinary[start_ptr + 8] = ((cur.longitude >> 24) & GET_BOTTOM_BITS(2));
-
-              outBufferBinary[start_ptr + 8] |= ((cur.altitude) & GET_BOTTOM_BITS(6)) << 2;
-              outBufferBinary[start_ptr + 9] = ((cur.altitude >> 6) & GET_BOTTOM_BITS(8));
-              outBufferBinary[start_ptr + 10] = ((cur.altitude >> 14) & GET_BOTTOM_BITS(8));
-              outBufferBinary[start_ptr + 11] = ((cur.altitude >> 22) & GET_BOTTOM_BITS(8));
-              outBufferBinary[start_ptr + 12] = ((cur.altitude >> 30) & GET_BOTTOM_BITS(2));
-
-              outBufferBinary[start_ptr + 12] |= ((cur.vbat) & GET_BOTTOM_BITS(6)) << 2;
-              outBufferBinary[start_ptr + 13] = ((cur.vbat) >> 6) & GET_BOTTOM_BITS(4);
-
-              outBufferBinary[start_ptr + 13] |= ((cur.baro_alt) & GET_BOTTOM_BITS(4)) << 4;
-              outBufferBinary[start_ptr + 14] = ((cur.baro_alt >> 4) & GET_BOTTOM_BITS(8));
-              outBufferBinary[start_ptr + 15] = ((cur.baro_alt >> 12) & GET_BOTTOM_BITS(8));
-              outBufferBinary[start_ptr + 16] = ((cur.baro_alt >> 20) & GET_BOTTOM_BITS(8));
-              outBufferBinary[start_ptr + 17] = ((cur.baro_alt >> 28) & GET_BOTTOM_BITS(4));
-
-              outBufferBinary[start_ptr + 17] |= ((cur.sats) & GET_BOTTOM_BITS(4)) << 4;
+              
             }
             outBufferPtr = 36;
           }
@@ -1106,6 +1091,17 @@ void loop()
           else // This is not the first time around the loop, so send a NULL message (to avoid wasted credits)
           {
             err = modem.sendReceiveSBDText(NULL, mt_buffer, mtBufferSize); // Send a NULL message
+          }
+
+          num_packet_sent++;
+
+          if (num_packet_sent >= 5) {
+            Serial.println("Sent 5 packets. stop sending now");
+            int end_time = millis() - start_time;
+
+            Serial.print("All 5 packets took ");
+            Serial.print(end_time);
+            Serial.println(" ms");
           }
 #else
           err = ISBD_SUCCESS; // Fake successful transmit
@@ -1188,7 +1184,8 @@ void loop()
         // Check if the monitor-the-ring-channel bit is set
         if ((myTrackerSettings.FLAGS2 & FLAGS2_RING) == FLAGS2_RING)
         {
-          loop_step = wait_for_ring; // Start monitoring the ring indicator
+          // loop_step = wait_for_ring; // Start monitoring the ring indicator
+          loop_step = sleep_9603;
         }
         else
         {
@@ -1242,106 +1239,9 @@ void loop()
       // Close the Iridium serial port
       Serial1.end();
 
-      // Check if we should leave the GNSS powered up: if geofence alerts are enabled and 1 or more geofences is defined
-      if (((myTrackerSettings.FLAGS2 & FLAGS2_GEOFENCE) == FLAGS2_GEOFENCE) && (((myTrackerSettings.GEOFNUM & 0xf0) >> 4) > 0))
-      {
-        // The FLAGS2_GEOFENCE bit is set so we should power up the GNSS, wait for a 3D fix,
-        // wait for the geofence status to go active, put the ZOE into powersave mode
-        // and then put the Artemis into deep sleep. If the geofence pin changes state,
-        // it will wake the Artemis and cause it to send a message.
-
-        Serial.println(F("Powering up the GNSS for geofence monitoring..."));
-        gnssON(); // Enable power for the GNSS
-        delay(2000); // Give the GNSS time to power up
-
-        setAGTWirePullups(0); // Remove the pull-ups from the I2C pins (internal to the Artemis) for best performance
-        if (myGPS.begin(agtWire) == true) //Connect to the Ublox module using Wire port
-        {
-          Serial.println(F("Waiting for a 3D GNSS fix..."));
-    
-          myTrackerSettings.FIX = 0; // Clear the fix type
-          
-          // Look for GPS signal for up to GNSS_timeout minutes
-          // Stop when we get a 3D fix, or we timeout
-          for (unsigned long tnow = millis(); (myTrackerSettings.FIX != 3) && (millis() - tnow < GNSS_timeout * 60UL * 1000UL);)
-          {
-          
-            myTrackerSettings.FIX = myGPS.getFixType(); // Get the GNSS fix type
-            
-            // Check battery voltage now we are drawing current for the GPS
-            // If voltage is lower than 0.2V below LOWBATT, stop looking for GNSS and go to sleep
-            get_vbat();
-            if (battVlow() == true) {
-              break; // Exit the for loop now
-            }
-    
-            // Flash the LED at 1Hz
-            if ((millis() / 1000) % 2 == 1) {
-              digitalWrite(LED, HIGH);
-            }
-            else {
-              digitalWrite(LED, LOW);
-            }
-    
-            // Delay for 100msec so we don't pound the I2C bus too hard!
-            delay(100);
-          }
-  
-          Serial.println(F("Waiting for the geofence status to go active..."));
-          byte geofenceStatus = 0; // Use this to hold the geofence status
-
-          // Wait for the geofence status to go active for up to GNSS_timeout minutes
-          // Stop when it goes active, or we timeout
-          for (unsigned long tnow = millis(); (geofenceStatus != 1) && (millis() - tnow < GNSS_timeout * 60UL * 1000UL);)
-          {
-          
-            geofenceState currentGeofenceState; // Create storage for the geofence state
-            myGPS.getGeofenceState(currentGeofenceState); // Get the geofence state
-            geofenceStatus = currentGeofenceState.status; // Get the status
-                    
-            // Check battery voltage now we are drawing current for the GPS
-            // If voltage is lower than 0.2V below LOWBATT, stop looking for GNSS and go to sleep
-            get_vbat();
-            if (battVlow() == true) {
-              break; // Exit the for loop now
-            }
-    
-            // Flash the LED at 1Hz
-            if ((millis() / 1000) % 2 == 1) {
-              digitalWrite(LED, HIGH);
-            }
-            else {
-              digitalWrite(LED, LOW);
-            }
-    
-            // Delay for 100msec so we don't pound the I2C bus too hard!
-            delay(100);
-          }
-
-          // Put the ZOE-M8Q into power save mode
-          if (myGPS.powerSaveMode() == true)
-          {
-            Serial.println(F("GNSS Power Save Mode enabled."));
-          }
-          else
-          {
-            Serial.println(F("*** GNSS Power Save Mode may have FAILED ***"));
-          }
-
-        }
-        else
-        {
-          // GNSS failed to start so power it off again
-        Serial.println(F("The GNSS failed to start. Powering it down again..."));
-        gnssOFF(); // Disable power for the GNSS
-        }
-      }
-      else
-      {
       // Make sure the GNSS is powered off
-        Serial.println(F("Powering down the GNSS..."));
-        gnssOFF(); // Disable power for the GNSS
-      }
+      Serial.println(F("Powering down the GNSS..."));
+      gnssOFF(); // Disable power for the GNSS
 
       // Close the I2C port
       //agtWire.end(); //DO NOT Power down I2C - causes badness with v2.1 of the core: https://github.com/sparkfun/Arduino_Apollo3/issues/412
@@ -1445,104 +1345,9 @@ void loop()
     }
     break; // End of case wakeUp
 
-    // ************************************************************************************************
-    // Leave the 9603N powered up and monitor the ring indicator continuously
-    // Exit and send a message (to download new MT messages) every WAKEINT seconds or earlier when we see a ring indication
-    // The user should have set WAKEINT to the same interval as TXINT or ALARMINT
-    case wait_for_ring:
-    {
-      Serial.println(F("Waiting for Ring Indication..."));
-
-      while ((interval_alarm == false) && (modem.hasRingAsserted() == false)) // Exit every WAKEINT seconds or when we see a ring indication
-      {
-        // Flash the LED for 100msec every 5 seconds
-        if (millis() % 5000 < 100) {
-          digitalWrite(LED, HIGH);
-        }
-        else {
-          digitalWrite(LED, LOW);
-        }
-      }
-      interval_alarm = false; // Clear the alarm flag now
-
-      if (modem.hasRingAsserted() == true)
-      {
-        Serial.println(F("Ring Indication received!"));
-      }
-
-      // Power down the 9603N as we are going to want to use the GNSS next and don't want bad things to happen to the RF switch!
-      // Also disable the Serial1 RX pin via IridiumSBD::endSerialPort
-      Serial.println(F("Putting the 9603N to sleep."));
-      err = modem.sleep();
-      if (err != ISBD_SUCCESS)
-      {
-        Serial.print(F("*** modem.sleep failed with error "));
-        Serial.print(err);
-        Serial.println(F(" ***"));
-      }
-      // Disable 9603N power
-      Serial.println(F("Disabling 9603N power..."));
-      digitalWrite(iridiumSleep, LOW); // Disable 9603N via its ON/OFF pin (modem.sleep should have done this already)
-      delay(100);
-      digitalWrite(iridiumPwrEN, LOW); // Disable Iridium Power
-      delay(100);
-      // Disable the supercapacitor charger
-      Serial.println(F("Disabling the supercapacitor charger..."));
-      digitalWrite(superCapChgEN, LOW); // Disable the super capacitor charger
-
-      delay(100); // Wait for serial port to clear
-
-      // Do it all again!
-      loop_step = loop_init;
-    }
-    break; // End of case wait_for_ring
-
-    // ************************************************************************************************
-    // Configure the tracker settings via Serial (USB)
-    case configureMe:
-    {
-      Serial.println(F("*** Tracker Configuration ***"));
-      Serial.println(F("Waiting for data..."));
-
-      tracker_serial_rx_status stat = check_for_serial_data(true); // Start checking for the arrival of new serial data
-
-      while ((stat != DATA_RECEIVED) && (stat != DATA_TIMEOUT))
-      {
-        stat = check_for_serial_data(false); // Keep checking for the arrival of serial data
-      }
-    
-      if (stat == DATA_RECEIVED) // If we received some data then parse it
-      {
-        Serial.println(F("Data received! Checking if it is valid..."));
-        tracker_parsing_result presult = check_data(tracker_serial_rx_buffer, tracker_serial_rx_buffer_size);
-        if (presult == DATA_VALID) // If the data is valid, parse it (and update the values in RAM)
-        {
-          Serial.println(F("Data is valid! Parsing it..."));
-          // Parse the data with the serial flag set to true so SOURCE can be changed
-          parse_data(tracker_serial_rx_buffer, tracker_serial_rx_buffer_size, &myTrackerSettings, true);
-          Serial.println(F("Parsing complete. Updating values in EEPROM."));
-          putTrackerSettings(&myTrackerSettings); // Update the settings in EEPROM
-          wake_int = myTrackerSettings.WAKEINT.the_data; // Copy WAKEINT into wake_int in case it has changed
-        }
-      }
-    
-      if (_printDebug == true)
-      {
-        // If debugging is enabled: print the tracker EEPROM contents as text
-        Serial.println(F("EEPROM contents (remember that data is little endian!):"));
-        displayEEPROMcontents();
-        Serial.println();
-      }
-    
-      printTrackerSettings(&myTrackerSettings); // Print the tracker settings (if debug is enabled)
-    
-      Serial.println(F("Done!"));
-      
-      // Go back where we came from... (Or so help me!)
-      loop_step = last_loop_step;
-    }
-    break; // End of case configureMe
-
+    default:
+    // deleted: wait_for_ring, configureMe cases
+      break;
   } // End of switch (loop_step)
 } // End of loop()
 

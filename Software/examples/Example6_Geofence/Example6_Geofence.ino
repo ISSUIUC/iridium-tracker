@@ -119,8 +119,8 @@ void setup()
   Serial.println(F("and that the line ending is set to Newline."));
   Serial.println(F("Then click Send to start the example."));
   Serial.println();
-  while(Serial.available() == 0)
-    ;
+  // while(Serial.available() == 0)
+  //   ;
 
   gnssON(); // Enable power for the GNSS
   delay(1000); // Let the ZOE power up
