@@ -122,6 +122,13 @@ MS8607 barometricSensor; //Create an instance of the MS8607 object
 // It also indicates if the tracker has been reset (the count will go back to zero).
 long iterationCounter = 0;
 
+template <typename T>
+T inv_convert_range(float val, float range) {
+    size_t numeric_range = (int64_t)std::numeric_limits<T>::max() - (int64_t)std::numeric_limits<T>::min() + 1;
+    float converted = val * (float)numeric_range / range;
+    return std::max(std::min((float)std::numeric_limits<T>::max(), converted), (float)std::numeric_limits<T>::min());
+}
+
 // Use these to keep a count of the seconds from the rtc
 volatile unsigned long seconds_since_last_wake = 0;
 volatile unsigned long seconds_since_last_alarmtx = 0;
@@ -165,33 +172,18 @@ bool _printDebug = false; // Flag to show if message field debug printing is ena
 Stream *_debugSerial; //The stream to send debug messages to (if enabled)
 
 typedef struct small_packet {
-  byte id : 2; // compressed to 2 bits
+  uint8_t id : 2; // compressed to 2 bits
   int seconds : 6; // compressed to 6 bits
   int minutes : 6; // compressed to 6 bits
-  int32_t latitude; // compressed to 26 bits
-  int32_t longitude; // compressed to 26 bits
+  int32_t latitude; 
+  int32_t longitude; 
   int32_t altitude; // compressed to 16 bits
+  uint16_t vbatt;
+  uint8_t sats;
+  uint16_t pressure;
 } small_packet;
 
-
-typedef struct big_packet {
-  byte id; // 2 bits
-  byte seconds; // 6 bits
-  byte minutes; // 6 bits
-  int32_t latitude; // 32 bits
-  int32_t longitude; // 32 bits
-  int32_t altitude; // 16 bits
-  int16_t vbat; // will need 10 bits for -512 cV to 511 cV, can do 8 bits if we want +/- 128, 9 for +/- 25
-  int32_t baro_alt; // 16 bits
-  byte sats; // 4 bits
-} big_packet;
-
 small_packet small_packet_buffer[4];
-big_packet big_packet_buffer[2];
-
-int time_last_big_packet = millis();
-
-bool send_big_packet = false;
 
 int num_packet_sent = 0;
 int start_time = millis();
@@ -597,13 +589,8 @@ void loop()
     case read_GPS:
     {
       int start = millis();
-
-      if (millis() - time_last_big_packet > SEND_BIG_PACKET_SPREAD_MS && false) {
-        send_big_packet = true;
-        time_last_big_packet = millis();
-      }
       // Serial.print("number of loops is: ");
-      int num_packets = send_big_packet ? 2 : 4;
+      int num_packets = 4;
       // Serial.println(num_packets);
 
       for (int loops = 0; loops < num_packets; loops++) {
@@ -688,56 +675,50 @@ void loop()
           int time_getting_fix = end - start;
           Serial.print("Time getting fix(ms) :"); Serial.println(time_getting_fix);
 
-          if (send_big_packet == false) {
-            // tag identifier
-            small_packet_buffer[loops].id = 0x00;
+          // tag identifier
+          small_packet_buffer[loops].id = 0x00;
 
+          if (loops == 0) {
             // seconds
             small_packet_buffer[loops].seconds = myTrackerSettings.SEC & GET_BOTTOM_BITS(6);
 
             // min
             small_packet_buffer[loops].minutes = myTrackerSettings.MIN & GET_BOTTOM_BITS(6);
-
-            // 3 degree + 5 decimal points of lat
-            small_packet_buffer[loops].latitude = myTrackerSettings.LAT.the_data;
-
-            // 3 degree + 5 decimal points of long
-            small_packet_buffer[loops].longitude = myTrackerSettings.LON.the_data;
-
-            // GPS Alt
-            small_packet_buffer[loops].altitude = ((int) ((myTrackerSettings.ALT.the_data / 1000.0))) & GET_BOTTOM_BITS(16);
           } else {
-            // big packet things
-            big_packet_buffer[loops].id = 0x01;
+            int8_t adding = (((int8_t)(myTrackerSettings.MIN & GET_BOTTOM_BITS(6))) - ((int8_t) small_packet_buffer[0].minutes)) * 60;
+            int8_t diff = ((int8_t)(myTrackerSettings.SEC) + adding) - ((int8_t) small_packet_buffer[0].seconds);
 
-            // seconds
-            big_packet_buffer[loops].seconds = myTrackerSettings.SEC & GET_BOTTOM_BITS(6);
-
-            // min
-            big_packet_buffer[loops].minutes = myTrackerSettings.MIN & GET_BOTTOM_BITS(6);
-
-            // 3 degree + 5 decimal points of lat
-            uint32_t compressed_lat = myTrackerSettings.LAT.the_data >> 6;
-            big_packet_buffer[loops].latitude = compressed_lat;
-
-            // 3 degree + 5 decimal points of long
-            uint32_t compressed_long = myTrackerSettings.LON.the_data >> 6;
-            big_packet_buffer[loops].longitude = compressed_long;
-
-            // GPS Alt
-            big_packet_buffer[loops].altitude = myTrackerSettings.ALT.the_data;
-
-            big_packet_buffer[loops].vbat = myTrackerSettings.BATTV.the_data & GET_BOTTOM_BITS(10);
-
-            uint16_t pressure = myTrackerSettings.PRESS.the_data;
-            int16_t temperature = myTrackerSettings.TEMP.the_data;
-
-            int32_t b_altitude = static_cast<int32_t>(-log(pressure * 0.000987) * (temperature/100.0 + 273.15) * 29.254);
-
-            big_packet_buffer[loops].baro_alt = b_altitude;
-
-            big_packet_buffer[loops].sats = myTrackerSettings.SATS & GET_BOTTOM_BITS(4);
+            small_packet_buffer[loops].seconds = (byte) diff;
           }
+
+          // 3 degree + 5 decimal points of lat
+          small_packet_buffer[loops].latitude = myTrackerSettings.LAT.the_data;
+
+          // 3 degree + 5 decimal points of long
+          small_packet_buffer[loops].longitude = myTrackerSettings.LON.the_data;
+
+          // GPS Alt
+          small_packet_buffer[loops].altitude = ((int) ((myTrackerSettings.ALT.the_data / 1000.0))) & GET_BOTTOM_BITS(16);
+
+          small_packet_buffer[loops].sats = myTrackerSettings.SATS;
+
+          get_vbat();
+          small_packet_buffer[loops].vbatt = myTrackerSettings.BATTV.the_data;
+
+          if (loops == 0 || loops == 3) {
+            setAGTWirePullups(1); // MS8607 needs pull-ups
+            bool barometricSensorOK;
+            barometricSensorOK = barometricSensor.begin(agtWire); // Begin the PHT sensor
+
+            if (barometricSensorOK) {
+              small_packet_buffer[loops].pressure =  (uint16_t)barometricSensor.getPressure();
+            } else {
+              small_packet_buffer[loops].pressure = DEF_PRESS;
+            }
+          } else {
+            small_packet_buffer[loops].pressure = DEF_PRESS;
+          }
+          setAGTWirePullups(0);
         }
         
         else
@@ -1006,48 +987,48 @@ void loop()
 
         else // we are sending binary
         {
-          if (send_big_packet == false) {
-            
-            // cant loop this cause packets are 12.25 bytes (AHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH)
-            for (int i = 0; i < 4; i++ ) {
-              int sp = i * 12;
-              small_packet cur = small_packet_buffer[i];
+          outBufferBinary[0] = small_packet_buffer[0].id & GET_BOTTOM_BITS(2);
 
-              outBufferBinary[sp + 0] = ((cur.id) & GET_BOTTOM_BITS(2));
-              outBufferBinary[sp + 0] |= (cur.seconds) & GET_BOTTOM_BITS(6) << 2;
+          outBufferBinary[0] |= (small_packet_buffer[0].minutes & GET_BOTTOM_BITS(6)) << 2;
 
-              outBufferBinary[sp + 1] = cur.latitude & GET_BOTTOM_BITS(8);
-              outBufferBinary[sp + 2] = (cur.latitude >> 8) & GET_BOTTOM_BITS(8);
-              outBufferBinary[sp + 3] = (cur.latitude >> 16) & GET_BOTTOM_BITS(8);
-              outBufferBinary[sp + 4] = (cur.latitude >> 24) & GET_BOTTOM_BITS(8);
+          outBufferBinary[1] = small_packet_buffer[0].seconds & GET_BOTTOM_BITS(6);
 
-              outBufferBinary[sp + 5] = cur.longitude & GET_BOTTOM_BITS(8);
-              outBufferBinary[sp + 6] = (cur.longitude >> 8) & GET_BOTTOM_BITS(8);
-              outBufferBinary[sp + 7] = (cur.longitude >> 16) & GET_BOTTOM_BITS(8);
-              outBufferBinary[sp + 8] = (cur.longitude >> 24) & GET_BOTTOM_BITS(8);
+          outBufferBinary[1] |= (small_packet_buffer[1].seconds & GET_BOTTOM_BITS(2)) << 6;
+          outBufferBinary[2] = (small_packet_buffer[1].seconds >> 2) & GET_BOTTOM_BITS(4);
+
+          outBufferBinary[2] |= (small_packet_buffer[2].seconds & GET_BOTTOM_BITS(4)) << 4;
+          outBufferBinary[3] = (small_packet_buffer[2].seconds >> 4) & GET_BOTTOM_BITS(2);
+
+          outBufferBinary[3] |= (small_packet_buffer[3].seconds & GET_BOTTOM_BITS(6)) << 6;
+
+          outBufferBinary[4] = (small_packet_buffer[0].pressure) & GET_BOTTOM_BITS(8);
+          outBufferBinary[5] = (small_packet_buffer[0].pressure >> 8) & GET_BOTTOM_BITS(8);
+
+          outBufferBinary[6] = (small_packet_buffer[3].pressure) & GET_BOTTOM_BITS(8);
+          outBufferBinary[7] = (small_packet_buffer[3].pressure >> 8) & GET_BOTTOM_BITS(8);
+
+          outBufferBinary[8] = ((small_packet_buffer[3].vbatt >> 1) & GET_BOTTOM_BITS(8));
+          outBufferBinary[9] = (small_packet_buffer[3].sats & GET_BOTTOM_BITS(8));
+          
+          // cant loop this cause packets are 12.25 bytes (AHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH)
+          for (int i = 1; i < 5; i++ ) {
+              int sp = i * 10;
+              small_packet cur = small_packet_buffer[i - 1];
+
+              outBufferBinary[sp + 0] = cur.latitude & GET_BOTTOM_BITS(8);
+              outBufferBinary[sp + 1] = (cur.latitude >> 8) & GET_BOTTOM_BITS(8);
+              outBufferBinary[sp + 2] = (cur.latitude >> 16) & GET_BOTTOM_BITS(8);
+              outBufferBinary[sp + 3] = (cur.latitude >> 24) & GET_BOTTOM_BITS(8);
+
+              outBufferBinary[sp + 4] = cur.longitude & GET_BOTTOM_BITS(8);
+              outBufferBinary[sp + 5] = (cur.longitude >> 8) & GET_BOTTOM_BITS(8);
+              outBufferBinary[sp + 6] = (cur.longitude >> 16) & GET_BOTTOM_BITS(8);
+              outBufferBinary[sp + 7] = (cur.longitude >> 24) & GET_BOTTOM_BITS(8);
               
-              outBufferBinary[sp + 9] = (cur.altitude) & GET_BOTTOM_BITS(8);
-              outBufferBinary[sp + 10] = (cur.altitude >> 8) & GET_BOTTOM_BITS(8);
-              
-              outBufferBinary[sp + 11] = (cur.minutes & GET_BOTTOM_BITS(6));
-            }
-            outBufferPtr = 48;
-          } else {
-            send_big_packet = false;
-
-            // do big packet shenanigans
-            for (int i = 0; i < 2; i++) {
-              int sp = i * 18;
-              big_packet cur = big_packet_buffer[i];
-
-              outBufferBinary[sp + 0] = ((cur.id) & GET_BOTTOM_BITS(2));
-
-              outBufferBinary[sp + 0] |= ((cur.seconds) & GET_BOTTOM_BITS(6)) << 2;
-
-              
-            }
-            outBufferPtr = 36;
+              outBufferBinary[sp + 8] = (cur.altitude) & GET_BOTTOM_BITS(8);
+              outBufferBinary[sp + 9] = (cur.altitude >> 8) & GET_BOTTOM_BITS(8);
           }
+          outBufferPtr = 50;
 
           // Print the message
           Serial.print(F("Binary message is '"));
