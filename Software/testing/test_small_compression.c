@@ -11,8 +11,8 @@ typedef struct small_packet {
   int32_t longitude; 
   int32_t altitude; // compressed to 16 bits
   uint16_t vbatt;
-  uint8_t sats;
   uint16_t pressure;
+  uint8_t sats;
 } small_packet;
 
 small_packet small_packet_buffer[4];
@@ -21,10 +21,10 @@ int main() {
     uint8_t outBufferBinary[50]; 
     size_t outBufferPtr = 0; // outBuffer pointer
     
-    small_packet p0 = {1, 5, 12, -1707483649, 65, 1, 432, 123, 32};
+    small_packet p0 = {1, 5, 12, -1707483649, 65, 1, 433, 123, 32};
     small_packet p1 = {0, 0, 0, 0, 0, 0};
     small_packet p2 = {1, 5, 12, -1707483649, -8812312, 1, 312, 123, 32};
-    small_packet p3 = {0, 0, 0, 0, 0, 0};
+    small_packet p3 = {0, 0, 0, 123, 0, 0, 123, 123, 123};
 
     small_packet_buffer[0] = p0;
     small_packet_buffer[1] = p1;
@@ -96,17 +96,18 @@ int main() {
     decoded[3].sats = outBufferBinary[9];
 
     for (int i = 1; i < 5; i++) {
-        small_packet cur = small_packet_buffer[i-1];
-        
         decoded[i - 1].latitude = (outBufferBinary[10 * i + 0]) | (outBufferBinary[10 * i + 1] << 8) | (outBufferBinary[10 * i + 2] << 16) | (outBufferBinary[10 * i + 3] << 24);
-        decoded[i - 1].longitude = (outBufferBinary[10 * i + 0]) | (outBufferBinary[10 * i + 5] << 8) | (outBufferBinary[10 * i + 6] << 16) | (outBufferBinary[10 * i + 7] << 24);
+        decoded[i - 1].longitude = (outBufferBinary[10 * i + 4]) | (outBufferBinary[10 * i + 5] << 8) | (outBufferBinary[10 * i + 6] << 16) | (outBufferBinary[10 * i + 7] << 24);
         decoded[i - 1].altitude = (outBufferBinary[10 * i + 8]) | (outBufferBinary[10 * i + 9] << 8);
     }
 
     for (int i = 0; i < 4; i++) {
-        small_packet cur = small_packet_buffer[i];
+        small_packet cur = decoded[i];
 
-        printf("ID: %d, SEC: %d, MIN: %d, LAT (d): %f, LONG (d): %f, ALT (m): %d, VBAT (V): %f, PRESSURE (mbar): %d\n", cur.id, cur.seconds, cur.minutes, cur.latitude * 0.0000001, cur.longitude * 0.0000001, cur.altitude, cur.vbatt * 0.01, cur.pressure);
+        printf("Decoded\t ID: %01d, SEC: %02d, MIN: %02d, LAT (d): %f, LONG (d): %f, ALT (m): %d, VBAT (V): %f, PRESSURE (mbar): %d, SATS: %d\n", cur.id, cur.seconds, cur.minutes, cur.latitude * 0.0000001, cur.longitude * 0.0000001, cur.altitude, cur.vbatt * 0.01, cur.pressure, cur.sats);
+        cur = small_packet_buffer[i];
+        printf("Actual \t ID: %01d, SEC: %02d, MIN: %02d, LAT (d): %f, LONG (d): %f, ALT (m): %d, VBAT (V): %f, PRESSURE (mbar): %d, SATS: %d\n", cur.id, cur.seconds, cur.minutes, cur.latitude * 0.0000001, cur.longitude * 0.0000001, cur.altitude, cur.vbatt * 0.01, cur.pressure, cur.sats);
+        printf("\n");
     }
 
 
