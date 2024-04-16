@@ -304,9 +304,15 @@ void IridiumSBD::endSerialPort()
 
 void setup()
 {
-  // Let's begin by setting up the I/O pins
-   
   pinMode(LED, OUTPUT); // Make the LED pin an output
+  // Let's begin by setting up the I/O pins
+  while (!Serial) {
+    digitalWrite(LED, HIGH);
+    delay(500);
+    digitalWrite(LED, LOW);
+    delay(500);
+  }
+   
 
   gnssOFF(); // Disable power for the GNSS
   pinMode(gnssBckpBatChgEN, INPUT); // GNSS backup batttery charge control; input = disable charging; output+low=charging. 
@@ -686,6 +692,9 @@ void loop()
             small_packet_buffer[loops].minutes = myTrackerSettings.MIN & GET_BOTTOM_BITS(6);
           } else {
             int8_t adding = (((int8_t)(myTrackerSettings.MIN & GET_BOTTOM_BITS(6))) - ((int8_t) small_packet_buffer[0].minutes)) * 60;
+            while (adding < 0) {
+              adding += 60;
+            }
             int8_t diff = ((int8_t)(myTrackerSettings.SEC) + adding) - ((int8_t) small_packet_buffer[0].seconds);
 
             small_packet_buffer[loops].seconds = (byte) diff;
@@ -1075,7 +1084,8 @@ void loop()
           }
 
           num_packet_sent++;
-
+          Serial.print("Sent num packets: ");
+          Serial.println(num_packet_sent);
           if (num_packet_sent >= 5) {
             Serial.println("Sent 5 packets. stop sending now");
             int end_time = millis() - start_time;
@@ -1083,10 +1093,18 @@ void loop()
             Serial.print("All 5 packets took ");
             Serial.print(end_time);
             Serial.println(" ms");
+
+            while (true) {
+              digitalWrite(LED, HIGH);
+              delay(500);
+              digitalWrite(LED, LOW);
+              delay(500);
+            }
           }
 #else
           err = ISBD_SUCCESS; // Fake successful transmit
           mtBufferSize = 0; // and with no MT message received
+          Serial.println("Did not actually send");
 #endif
 
           // Check if the message sent OK
