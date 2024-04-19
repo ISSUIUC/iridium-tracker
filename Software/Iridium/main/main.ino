@@ -306,12 +306,12 @@ void setup()
 {
   pinMode(LED, OUTPUT); // Make the LED pin an output
   // Let's begin by setting up the I/O pins
-  while (!Serial) {
-    digitalWrite(LED, HIGH);
-    delay(500);
-    digitalWrite(LED, LOW);
-    delay(500);
-  }
+  // while (!Serial) {
+  //   digitalWrite(LED, HIGH);
+  //   delay(500);
+  //   digitalWrite(LED, LOW);
+  //   delay(500);
+  // }
    
 
   gnssOFF(); // Disable power for the GNSS
@@ -390,6 +390,22 @@ void setup()
   rtc.setAlarmMode(7); // Set the RTC alarm mode
   rtc.attachInterrupt(); // Attach RTC alarm interrupt  
 
+  for (int i = 0; i < 6; i++) {
+    Serial.print("in the loop: ");
+    Serial.println(i);
+    digitalWrite(LED, HIGH);
+    delay(1000);
+    digitalWrite(LED, LOW);
+    delay(1000);
+    digitalWrite(LED, HIGH);
+    delay(200);
+    digitalWrite(LED, LOW);
+    delay(200);
+    digitalWrite(LED, HIGH);
+    delay(1000);
+    digitalWrite(LED, LOW);
+    delay(1000);
+  }
 }
 
 void loop()
