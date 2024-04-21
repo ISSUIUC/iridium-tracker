@@ -95,7 +95,7 @@ SFE_UBLOX_GNSS myGPS;
 trackerSettings myTrackerSettings; // Create storage for the tracker settings in RAM
 
 // THIS IS IMPORTANT
-# define noTX // Uncomment this line to disable the Iridium SBD transmit if you want to test the code without using message credits
+// # define noTX // Uncomment this line to disable the Iridium SBD transmit if you want to test the code without using message credits
 //#define skipGNSS // Uncomment this line to skip getting a GNSS fix (only valid if noTX is defined too)
 
 #include "RTC.h" //Include RTC library included with the Arduino_Apollo3 core
@@ -306,13 +306,6 @@ void setup()
 {
   pinMode(LED, OUTPUT); // Make the LED pin an output
   // Let's begin by setting up the I/O pins
-  // while (!Serial) {
-  //   digitalWrite(LED, HIGH);
-  //   delay(500);
-  //   digitalWrite(LED, LOW);
-  //   delay(500);
-  // }
-   
 
   gnssOFF(); // Disable power for the GNSS
   pinMode(gnssBckpBatChgEN, INPUT); // GNSS backup batttery charge control; input = disable charging; output+low=charging. 
@@ -389,23 +382,6 @@ void setup()
   */
   rtc.setAlarmMode(7); // Set the RTC alarm mode
   rtc.attachInterrupt(); // Attach RTC alarm interrupt  
-
-  for (int i = 0; i < 6; i++) {
-    Serial.print("in the loop: ");
-    Serial.println(i);
-    digitalWrite(LED, HIGH);
-    delay(1000);
-    digitalWrite(LED, LOW);
-    delay(1000);
-    digitalWrite(LED, HIGH);
-    delay(200);
-    digitalWrite(LED, LOW);
-    delay(200);
-    digitalWrite(LED, HIGH);
-    delay(1000);
-    digitalWrite(LED, LOW);
-    delay(1000);
-  }
 }
 
 void loop()
@@ -1100,23 +1076,6 @@ void loop()
           }
 
           num_packet_sent++;
-          Serial.print("Sent num packets: ");
-          Serial.println(num_packet_sent);
-          if (num_packet_sent >= 5) {
-            Serial.println("Sent 5 packets. stop sending now");
-            int end_time = millis() - start_time;
-
-            Serial.print("All 5 packets took ");
-            Serial.print(end_time);
-            Serial.println(" ms");
-
-            while (true) {
-              digitalWrite(LED, HIGH);
-              delay(500);
-              digitalWrite(LED, LOW);
-              delay(500);
-            }
-          }
 #else
           err = ISBD_SUCCESS; // Fake successful transmit
           mtBufferSize = 0; // and with no MT message received
