@@ -25,10 +25,10 @@ Once you have all these installed, you should be good to start flashing code.
     ├── Software/
     │   ├── examples/
     │   └── Iridium/
-    │       ├── main
-    │       └── main_no_tx
+    │       └──  main
     ├── Tools/
     ├── .gitignore
+    ├── Makefile
     └── README.md
 ```
 `binaries` Provided binaries from SparkFun
@@ -55,3 +55,6 @@ Once you have all these installed, you should be good to start flashing code.
 Most of the code in this comes from the starter guide for the [Artemis Global Tracke](https://learn.sparkfun.com/tutorials/artemis-global-tracker-hookup-guide/artemis-global-tracker-arduino-examples). To find the code that we (ISS) updated, which is the code you should be flashing, go to ```Software/Iridium```. Here you should see two folders, `main` and `mmain_no_tx`. Due to the price of using the Iridum Tracker, if you are not directly testing/using the iridium uplink, **DO NOT FLASH** `main`.
 
 You can also reference the examples in `Software/examples` if you want to see how to do other things with the module.
+
+## Decoding
+In `Software/decoding` there is a script to decode the encoded message sent to the iridium service. You can compile, and then run, this script with `make` and `./a.out`, or do it all in one command with `make run`. Once the script is running, copy in the text from the iridium service into the terminal, and hit enter to get the decoded packet.
