@@ -1,4 +1,4 @@
-CC = clang
+CC = gcc
 
 SRC = Software/decoding/decoder.c
 

@@ -56,7 +56,24 @@ int main() {
 
         for (int i = 0; i < 4; i++) {
             small_packet cur = decoded[i];
-            printf("Decoded\t ID: %01d, SEC: %02d, MIN: %02d, LAT (d): %f, LONG (d): %f, ALT (m): %d, VBAT (V): %f, PRESSURE (mbar): %d, SATS: %d\n", cur.id, cur.seconds, cur.minutes, cur.latitude * 0.0000001, cur.longitude * 0.0000001, cur.altitude, cur.vbatt * 0.01, cur.pressure, cur.sats);
+            switch (i)
+            {
+                case 0:
+                    printf("P%d:\t ID: %01d, SEC: %02d, MIN: %02d, LAT (d): %f, LONG (d): %f, ALT (m): %d, PRESSURE (mbar): %d\n", i, cur.id, cur.seconds, cur.minutes, cur.latitude * 0.0000001, cur.longitude * 0.0000001, cur.altitude, cur.pressure);
+                    break;
+                case 1:
+                    printf("P%d:\t SEC_SINCE_PREVIOUS: %02d, LAT (d): %f, LONG (d): %f, ALT (m): %d\n", i, cur.seconds, cur.latitude * 0.0000001, cur.longitude * 0.0000001, cur.altitude);
+                    break;
+                case 2:
+                    printf("P%d:\t SEC_SINCE_PREVIOUS: %02d, LAT (d): %f, LONG (d): %f, ALT (m): %d\n", i, cur.seconds, cur.latitude * 0.0000001, cur.longitude * 0.0000001, cur.altitude);
+                    break;
+                case 3:
+                    printf("P%d:\t SEC_SINCE_PREVIOUS: %02d, LAT (d): %f, LONG (d): %f, ALT (m): %d, VBAT (V): %f, PRESSURE (mbar): %d, SATS: %d\n", i, cur.seconds, cur.latitude * 0.0000001, cur.longitude * 0.0000001, cur.altitude, cur.vbatt * 0.01, cur.pressure, cur.sats);
+                    break;
+                default:
+                    break;
+            }
+            
         }
         fgets(input_string, sizeof(input_string), stdin);
         printf("\n");
