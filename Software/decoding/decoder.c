@@ -15,8 +15,6 @@ typedef struct small_packet {
   uint8_t sats;
 } small_packet;
 
-small_packet small_packet_buffer[4];
-
 int main() {
     while (1) {
         char input_string[100];
