@@ -188,6 +188,8 @@ small_packet small_packet_buffer[4];
 int num_packet_sent = 0;
 int start_time = millis();
 
+volatile float estimated_velocity = 0;
+
 #define GET_BOTTOM_BITS(n) ((1 << n) - 1)
 
 // Timeout after this many _minutes_ when waiting for a 3D GNSS fix
@@ -419,61 +421,9 @@ void loop()
       // Setup the IridiumSBD
       modem.setPowerProfile(IridiumSBD::USB_POWER_PROFILE); // Change power profile to "low current"
 
-      loop_step = read_pressure; // Move on, check the PHT readings (in case we need to send an alarm message)
+      loop_step = start_GPS; // Move on, check the PHT readings (in case we need to send an alarm message)
     }
     break; // End of case loop_init
-
-    // ************************************************************************************************
-    // Read the pressure and temperature from the MS8607
-    case read_pressure:
-    {
-      Serial.println(F("Getting the PHT readings..."));
-
-      agtWire.begin(); // Set up the I2C pins
-      agtWire.setClock(100000); // Use 100kHz for best performance
-      setAGTWirePullups(1); // MS8607 needs pull-ups
-
-      bool barometricSensorOK;
-      barometricSensorOK = barometricSensor.begin(agtWire); // Begin the PHT sensor
-      if (barometricSensorOK == false)
-      {
-        // Send a warning message if we were unable to connect to the MS8607:
-        Serial.println(F("*** Could not detect the MS8607 sensor. Trying again... ***"));
-        barometricSensorOK = barometricSensor.begin(agtWire); // Re-begin the PHT sensor
-        if (barometricSensorOK == false)
-        {
-          // Send a warning message if we were unable to connect to the MS8607:
-          Serial.println(F("*** MS8607 sensor not detected at default I2C address ***"));
-        }
-      }
-
-      if (barometricSensorOK == false) // If the sensor is not OK
-      {
-        // Set the pressure and temperature to default values
-        myTrackerSettings.PRESS.the_data = DEF_PRESS;
-        myTrackerSettings.TEMP.the_data = DEF_TEMP;
-        myTrackerSettings.HUMID.the_data = DEF_HUMID;
-      }
-      else // The sensor is OK so let's read and print the PHT values
-      {
-        myTrackerSettings.PRESS.the_data = (uint16_t)(barometricSensor.getPressure()); // mbar
-        myTrackerSettings.TEMP.the_data = (int16_t)(barometricSensor.getTemperature() * 100.0); // Convert to °C * 10^-2
-        myTrackerSettings.HUMID.the_data = (uint16_t)(barometricSensor.getHumidity() * 100.0); // Convert to %RH * 10^-2
-
-        Serial.print(F("Pressure (mbar): "));
-        Serial.println(myTrackerSettings.PRESS.the_data);
-        Serial.print(F("Temperature (C * 10^-2): "));
-        Serial.println(myTrackerSettings.TEMP.the_data);
-        Serial.print(F("Humidity (%RH * 10^-2): "));
-        Serial.println(myTrackerSettings.HUMID.the_data);
-      }
-
-      alarmState = false; // Clear the alarm state
-      alarmType = 0; // Clear the alarm type
-
-      loop_step = start_GPS; // Get ready to move on and start the GPS
-    }
-    break; // End of case read_pressure
 
     // ************************************************************************************************
     // Power up the GNSS (ZOE-M8Q)
@@ -590,6 +540,9 @@ void loop()
       // Serial.print("number of loops is: ");
       int num_packets = 4;
       // Serial.println(num_packets);
+
+      float t1 = 0;
+      float t2 = 0;
 
       for (int loops = 0; loops < num_packets; loops++) {
         Serial.println(F("Waiting for a 3D GNSS fix..."));
@@ -720,6 +673,15 @@ void loop()
             small_packet_buffer[loops].pressure = DEF_PRESS;
           }
           setAGTWirePullups(0);
+
+          if (loops == 0) {
+            t1 = millis();
+          }
+
+          if (loops == 3) {
+            t2 = millis();
+            estimated_velocity = (small_packet_buffer[3].pressure - small_packet_buffer[0].pressure) / ((t2 - t1) * 1000);
+          }
         }
         
         else
@@ -768,6 +730,10 @@ void loop()
         last_loop_step = start_GPS; // Let's read the GPS again when leaving configure
         loop_step = configureMe; // Start the configure
       }
+
+      if (num_packet_sent >= 3 && abs(estimated_velocity) < 10) {
+        loop_step = start_GPS;
+      } 
     }
     break; // End of case read_GPS
 
