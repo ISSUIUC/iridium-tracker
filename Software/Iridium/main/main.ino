@@ -307,6 +307,7 @@ void IridiumSBD::endSerialPort()
 void setup()
 {
   pinMode(LED, OUTPUT); // Make the LED pin an output
+  agtWire.begin();
   // Let's begin by setting up the I/O pins
 
   gnssOFF(); // Disable power for the GNSS
