@@ -95,7 +95,7 @@ SFE_UBLOX_GNSS myGPS;
 trackerSettings myTrackerSettings; // Create storage for the tracker settings in RAM
 
 // THIS IS IMPORTANT
-#define noTX // Uncomment this line to disable the Iridium SBD transmit if you want to test the code without using message credits
+// #define noTX // Uncomment this line to disable the Iridium SBD transmit if you want to test the code without using message credits
 //#define skipGNSS // Uncomment this line to skip getting a GNSS fix (only valid if noTX is defined too)
 
 #include "RTC.h" //Include RTC library included with the Arduino_Apollo3 core

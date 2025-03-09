@@ -733,6 +733,7 @@ void loop()
       }
 
       if (num_packet_sent >= 3 && abs(estimated_velocity) < 10) {
+        Serial.println("Redoing GPS b/c in flight");
         loop_step = start_GPS;
       } 
     }
@@ -1282,6 +1283,7 @@ void loop()
       gnssOFF();
 
       // Do it all again!
+      delay(180000);
       loop_step = loop_init;
     }
     break; // End of case wakeUp
