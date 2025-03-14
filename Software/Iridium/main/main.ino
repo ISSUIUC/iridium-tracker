@@ -371,7 +371,6 @@ void setup()
   }
 
   wake_int = myTrackerSettings.WAKEINT.the_data; // Copy WAKEINT into wake_int (volatile for the ISR)
-  wake_int = 180;
 
   // Set up the rtc for 1 second interrupts now that TXINT has been initialized
   /*
@@ -733,10 +732,10 @@ void loop()
         loop_step = configureMe; // Start the configure
       }
 
-      // if (num_packet_sent >= 3 && abs(estimated_velocity) < 10) {
-      //   Serial.println("Redoing GPS b/c in flight");
-      //   loop_step = start_GPS;
-      // } 
+      if (num_packet_sent >= 3 && abs(estimated_velocity) < 10) {
+        Serial.println("Redoing GPS b/c in flight");
+        loop_step = start_GPS;
+      } 
     }
     break; // End of case read_GPS
 
@@ -1084,7 +1083,6 @@ void loop()
                 Serial.println(F("Parsing complete. Updating values in EEPROM."));
                 putTrackerSettings(&myTrackerSettings); // Update the settings in EEPROM
                 wake_int = myTrackerSettings.WAKEINT.the_data; // Copy WAKEINT into wake_int in case it has changed
-                wake_int = 180;
               }
   
               if (_printDebug == true)
@@ -1285,7 +1283,7 @@ void loop()
       gnssOFF();
 
       // Do it all again!
-      // delay(180000);
+      delay(180000);
       loop_step = loop_init;
     }
     break; // End of case wakeUp
