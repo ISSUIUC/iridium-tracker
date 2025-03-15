@@ -371,6 +371,7 @@ void setup()
   }
 
   wake_int = myTrackerSettings.WAKEINT.the_data; // Copy WAKEINT into wake_int (volatile for the ISR)
+  wake_int = 180;
 
   // Set up the rtc for 1 second interrupts now that TXINT has been initialized
   /*
@@ -681,7 +682,7 @@ void loop()
 
           if (loops == 3) {
             t2 = millis();
-            estimated_velocity = (small_packet_buffer[3].pressure - small_packet_buffer[0].pressure) / ((t2 - t1) * 1000);
+            estimated_velocity = (small_packet_buffer[3].pressure - small_packet_buffer[0].pressure);
           }
         }
         
@@ -732,7 +733,9 @@ void loop()
         loop_step = configureMe; // Start the configure
       }
 
-      if (num_packet_sent >= 3 && abs(estimated_velocity) < 10) {
+      // if we have sent more than 3 packets, and the estimated vertical velocity is high, then we do not want to transmit
+      // since we are probably in flight. 
+      if (num_packet_sent >= 3 && abs(estimated_velocity) > 10) {
         Serial.println("Redoing GPS b/c in flight");
         loop_step = start_GPS;
       } 
@@ -1042,8 +1045,6 @@ void loop()
           {
             err = modem.sendReceiveSBDText(NULL, mt_buffer, mtBufferSize); // Send a NULL message
           }
-
-          num_packet_sent++;
 #else
           err = ISBD_SUCCESS; // Fake successful transmit
           mtBufferSize = 0; // and with no MT message received
@@ -1061,6 +1062,10 @@ void loop()
           else
           {
             Serial.println(F(">>> Message sent! <<<"));
+            if (firstTX) {
+              num_packet_sent++;
+            }
+            
             // Flash LED rapidly to indicate successful send
             for (int i = 0; i < 10; i++)
             {
@@ -1083,6 +1088,7 @@ void loop()
                 Serial.println(F("Parsing complete. Updating values in EEPROM."));
                 putTrackerSettings(&myTrackerSettings); // Update the settings in EEPROM
                 wake_int = myTrackerSettings.WAKEINT.the_data; // Copy WAKEINT into wake_int in case it has changed
+                wake_int = 180;
               }
   
               if (_printDebug == true)
@@ -1283,7 +1289,7 @@ void loop()
       gnssOFF();
 
       // Do it all again!
-      delay(180000);
+      // delay(180000);
       loop_step = loop_init;
     }
     break; // End of case wakeUp
