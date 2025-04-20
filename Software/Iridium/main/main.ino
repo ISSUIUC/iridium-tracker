@@ -186,9 +186,10 @@ typedef struct small_packet {
 small_packet small_packet_buffer[4];
 
 int num_packet_sent = 0;
-int start_time = millis();
+volatile unsigned long start_time = millis();
 
 volatile float estimated_velocity = 0;
+volatile bool detect_ascent = false;
 
 #define GET_BOTTOM_BITS(n) ((1 << n) - 1)
 
@@ -735,7 +736,23 @@ void loop()
 
       // if we have sent more than 3 packets, and the estimated vertical velocity is high, then we do not want to transmit
       // since we are probably in flight. 
-      if (num_packet_sent >= 3 && abs(estimated_velocity) > 10) {
+
+      // if the change in barometer is negative (going upwards), say we detected ascent
+      if (estimated_velocity < 10) {
+        detect_ascent = true;
+      }
+
+      /**
+       * if any of the following conditions are the case, we transmit
+       * - transmitted less than three packets
+       * - we have detected ascent and now are not moving vertically a lot (abs of velocity is small)
+       * - time since startup is >= 3 hours
+       */
+
+
+      bool should_transmit = (num_packet_sent < 3) ||  (detect_ascent && abs(estimated_velocity) < 10) || (millis() - start_time > 10800000);
+
+      if (!should_transmit) {
         Serial.println("Redoing GPS b/c in flight");
         loop_step = start_GPS;
       } 
