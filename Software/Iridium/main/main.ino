@@ -738,7 +738,7 @@ void loop()
       // since we are probably in flight. 
 
       // if the change in barometer is negative (going upwards), say we detected ascent
-      if (estimated_velocity < 10) {
+      if (estimated_velocity < -10) {
         detect_ascent = true;
       }
 
